@@ -1,2 +1,2 @@
-# berrynettest
-用于测试berrynet文件
+# 首先运行`configure`文件
+理清其中逻辑, 之后决定如何改进
