@@ -42,12 +42,14 @@ install_opencv() {
 
 install_nodejs() {
     # v10.x is LTS, if you want the latest feature, change to "setup_11.x".
+    #指定发行版本
     curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
     sudo apt-get install -y nodejs
 }
 
 install_system_dependencies() {
     sudo apt-get update
+    # TODO: 弄清 supervisor 文档
     if [ "$CODENAME" = "buster" ]; then
         sudo apt-get install -y \
             supervisor
@@ -87,20 +89,23 @@ install_berrynet_repository() {
 }
 
 install_configs() {
-    # supervisor
+    # supervisor 配置文件注意
     sudo cp config/supervisor/conf.d/berrynet-tflite.conf /etc/supervisor/conf.d/
+    # 日志
     sudo mkdir -p /var/log/berrynet
 
-    # mosquitto
+    # mosquitto 服务器
     sudo cp config/etc/mosquitto/conf.d/berrynet.conf /etc/mosquitto/conf.d
 
     if [ "$DISTRIBUTIONID" = "Raspbian" ]; then
         # Make RPi camera to show at /dev/videoN
+        # ? 模型训练
         sudo cp config/bcm2835-v4l2.conf /etc/modules-load.d
     fi
 }
 
 install_berrynet_py() {
+  # TODO: 这里面是什么?
     sudo apt-get install -y berrynet
     # FIXME: Freeboard dependency
     #sudo npm install -g mime
@@ -121,24 +126,24 @@ install_berrynet_js() {
         line.js \
         package.json \
         $working_dir
+    # TODO: 注意这个管理文件
     sudo cp berrynet-manager /usr/local/bin
     # FIXME: image dir should be created by program
     mkdir -p /usr/local/berrynet/inference/image
     # install npm dependencies
     pushd $working_dir > /dev/null
+    # 运行 package.json
     sudo npm install --unsafe-perm
     popd > /dev/null
 }
 
 install_model() {
+  # TODO: 后面替换为我们的 model
     local model_name="$1"
     echo "Install model $model_name"
     sudo apt-get install -y $model_name
 }
 
-download_classifier_model_caffe2() {
-    sh ./utils/install-caffe2-models.sh
-}
 
 install_tensorflow() {
     if [ "$DISTRIBUTIONID" = "Ubuntu" ]; then
@@ -207,78 +212,14 @@ install_openvino() {
     fi
 }
 
-install_darknet () {
-    # For x86, we use pure Darknet.
-    # For Raspberry Pi, we use pure Darknet + NNPACK.
-    #
-    # To understand how Darknet NNPACK packages are built, please refer to
-    # https://github.com/DT42/BerryNet/blob/master/doc/darknet-nnpack.md
-    sudo apt-get install -y darknet libdarknet
-}
-
-#install_darknet() {
-#    local peachpy_version="0.0.1"
-#    local confu_version="cc90068"
-#    local ninja_version="v1.8.2"
-#    local nnpack_darknet_version="1ecda10"
-#    local darknet_nnpack_version="fa5bddc"
-#
-#    # build dependencies
-#    pip3 install --user PeachPy==$peachpy_version
-#    pip3 install --user git+https://github.com/Maratyszcza/confu@$confu_version
-#
-#    pushd /tmp > /dev/null
-#    git clone https://github.com/ninja-build/ninja.git
-#    pushd ninja > /dev/null
-#    git reset --hard $ninja_version
-#    ./configure.py --bootstrap
-#    popd > /dev/null
-#    popd > /dev/null
-#
-#    sudo apt-get install -y clang
-#
-#    pushd /tmp > /dev/null
-#    git clone https://github.com/thomaspark-pkj/NNPACK-darknet.git
-#    pushd NNPACK-darknet > /dev/null
-#    git reset --hard $nnpack_darknet_version
-#    $HOME/.local/bin/confu setup
-#    python ./configure.py --backend auto
-#    /tmp/ninja/ninja
-#    sudo cp lib/{libgoogletest-core.a,libnnpack.a,libpthreadpool.a} /usr/lib/
-#    sudo cp include/nnpack.h /usr/include/
-#    sudo cp deps/pthreadpool/include/pthreadpool.h /usr/include/
-#    popd > /dev/null
-#    popd > /dev/null
-#
-#    # build detection backend (darknet)
-#    pushd inference > /dev/null
-#    git clone https://github.com/thomaspark-pkj/darknet-nnpack.git darknet
-#    pushd darknet > /dev/null
-#    git reset --hard $darknet_nnpack_version
-#    patch -p 1 < ../../patch/01-detection-backend.patch
-#    make -j
-#    popd > /dev/null
-#    popd > /dev/null
-#
-#    cp utils/darknet/detectord.py inference/darknet
-#    mkdir inference/darknet/utils
-#    cp utils/darknet/utils/localrun.sh inference/darknet/utils
-#}
-
-install_caffe2() {
-    if [ "$DISTRIBUTIONID" = "Ubuntu" ]; then
-	sh ./utils/install-caffe2-ubuntu.sh
-    elif [ "$DISTRIBUTIONID" = "Raspbian" ]; then
-	sh ./utils/install-caffe2-raspbian.sh
-    fi
-}
-
 update_system_service() {
     sudo service mosquitto restart
     sudo supervisorctl reload
+    # TODO: ?
     sudo a2enconf berrynet-dashboard
 }
 
+# run shell
 install_system_dependencies 2>&1 | tee -a $LOG
 install_berrynet_repository 2>&1 | tee -a $LOG
 install_berrynet_py 2>&1 | tee -a $LOG
@@ -335,3 +276,5 @@ update_system_service 2>&1 | tee -a $LOG
     echo ""
     echo "We are happy to check and fix it, thank you!"
 } | tee -a $LOG
+
+# 关键点 supervisor
